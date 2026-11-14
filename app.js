@@ -355,16 +355,24 @@ $("btn-ready").addEventListener("click", () => {
   room.child("seats/" + myRole).update({ ids, ready: !s.ready });
 });
 
+function showErr(msg) {
+  const e = $("lobby-error");
+  e.textContent = msg;
+  e.classList.remove("hidden");
+}
+const dbErr = (err) => showErr(/permission/i.test(err.message) ? "Firebase rechazó el acceso: publica las reglas en Realtime Database > Reglas." : "Error de Firebase: " + err.message);
+
 function joinRoom(c) {
   code = c.toUpperCase();
   room = db.ref("rooms/" + code);
   sessionStorage.axieRoom = code;
-  history.replaceState(null, "", "?sala=" + code);
+  try { window.history.replaceState(null, "", "?sala=" + code); } catch (e) { /* no crítico */ }
+  renderLobby(); // muestra la sala al instante, sin esperar a la red
   room.child("seats").on("value", (s) => {
     seats = s.val() || {};
     myRole = [1, 2].find((n) => seats[n] && seats[n].uid === uid) || 0;
     renderLobby(); refresh();
-  });
+  }, dbErr);
   room.child("blind").on("value", (s) => { blind = s.val() || {}; onBlind(); });
   room.child("reveal").on("value", (s) => { reveal = s.val() || {}; onBlind(); });
   room.child("game").on("value", (s) => {
@@ -372,7 +380,7 @@ function joinRoom(c) {
     hasGame = !!g;
     if (g) applyGame(g);
     renderLobby(); refresh();
-  });
+  }, dbErr);
 }
 
 $("btn-create-room").addEventListener("click", () => {
@@ -393,6 +401,12 @@ try {
   if (typeof FIREBASE_CONFIG === "undefined" || FIREBASE_CONFIG.apiKey.startsWith("TU_")) throw new Error("config");
   firebase.initializeApp(FIREBASE_CONFIG);
   db = firebase.database();
+  let connTimer;
+  db.ref(".info/connected").on("value", (s) => {
+    clearTimeout(connTimer);
+    if (s.val()) $("lobby-error").classList.add("hidden");
+    else connTimer = setTimeout(() => showErr("Sin conexión con Firebase. Revisa databaseURL en firebase-config.js, que Realtime Database esté creada y que ningún bloqueador impida la conexión."), 6000);
+  });
   const saved = new URLSearchParams(location.search).get("sala") || sessionStorage.axieRoom;
   if (saved) joinRoom(saved);
 } catch (e) {
