@@ -51,7 +51,6 @@
       <div class="hud-controls">
         <button type="button" id="btn-undo" class="hud-btn hidden" title="Deshacer último baneo">↩ Deshacer</button>
         <button type="button" id="btn-reset" class="hud-btn" title="Reiniciar partida">🔄 Reiniciar</button>
-        <button type="button" id="btn-edit-teams" class="hud-btn primary-hud" title="Configurar IDs de Axies y nombres">✏️ Equipos</button>
         <label for="bg-upload" class="hud-btn icon-only" title="Cambiar imagen de fondo">🖼️</label>
         <input type="file" id="bg-upload" accept="image/*" class="hidden" />
       </div>
@@ -153,65 +152,6 @@
       </div>
     </footer>
 
-    <!-- Cortina Anti-Espionaje para Primer Baneo Simultáneo Oculto -->
-    <div id="privacy-curtain" class="overlay-modal hidden">
-      <div class="curtain-card">
-        <div class="curtain-badge">🔒 BANEO OCULTO SIMULTÁNEO</div>
-        <h2 id="curtain-title">Turno secreto de Jugador 1</h2>
-        <p id="curtain-desc">
-          Asegúrate de que <strong id="curtain-opponent">Jugador 2</strong> no esté mirando la pantalla antes de elegir tu baneo secreto.
-        </p>
-        <button type="button" id="btn-curtain-ready" class="action-pill gold large">
-          👁️ Soy <span id="curtain-actor">Jugador 1</span>, mostrar tablero
-        </button>
-      </div>
-    </div>
-
-    <!-- Modal de Edición de Equipos (10 IDs + Nombres Opcionales) -->
-    <div id="teams-modal" class="overlay-modal hidden">
-      <div class="modal-card wide-modal">
-        <div class="modal-header">
-          <h3>Configurar Jugadores y 10 Axies por Lado</h3>
-          <button type="button" id="btn-close-teams" class="close-x">✕</button>
-        </div>
-
-        <div class="teams-editor-grid">
-          <!-- Editor Jugador 1 -->
-          <div class="team-editor-col">
-            <label class="field-label">Nombre Jugador 1 (opcional)</label>
-            <input type="text" id="input-p1-name" class="text-input" placeholder="Jugador 1" maxlength="20" />
-
-            <label class="field-label">Pegar 10 IDs rápidos (desde Excel o lista)</label>
-            <div class="paste-row">
-              <input type="text" id="paste-p1" class="text-input" placeholder="Ej: 11268195 12188801 4148780..." />
-              <button type="button" class="mini-btn" id="btn-apply-paste-p1">Aplicar</button>
-            </div>
-
-            <div class="slots-10-grid" id="editor-slots-p1"></div>
-          </div>
-
-          <!-- Editor Jugador 2 -->
-          <div class="team-editor-col">
-            <label class="field-label">Nombre Jugador 2 (opcional)</label>
-            <input type="text" id="input-p2-name" class="text-input" placeholder="Jugador 2" maxlength="20" />
-
-            <label class="field-label">Pegar 10 IDs rápidos (desde Excel o lista)</label>
-            <div class="paste-row">
-              <input type="text" id="paste-p2" class="text-input" placeholder="Ej: 12162441 12070166 12179007..." />
-              <button type="button" class="mini-btn" id="btn-apply-paste-p2">Aplicar</button>
-            </div>
-
-            <div class="slots-10-grid" id="editor-slots-p2"></div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" id="btn-load-sample" class="hud-btn">⚡ Cargar IDs de ejemplo</button>
-          <button type="button" id="btn-save-teams" class="action-pill gold">💾 Guardar y Aplicar a la Arena</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Modal Final 6 vs 6 (Al pulsar PLAY) -->
     <div id="summary-modal" class="overlay-modal hidden">
       <div class="modal-card wide-modal">
@@ -240,6 +180,34 @@
     </div>
   </div>
 
+  <div id="lobby" class="overlay-modal">
+    <div class="modal-card wide-modal">
+      <h3>Salas en vivo</h3>
+      <p id="lobby-error" class="coin-result-msg hidden"></p>
+      <div id="lobby-home" class="team-editor-col">
+        <label class="field-label" for="lobby-name">Tu nombre (opcional)</label>
+        <input type="text" id="lobby-name" class="text-input" maxlength="20" placeholder="Jugador" />
+        <button type="button" id="btn-create-room" class="action-pill gold">Crear sala</button>
+        <label class="field-label" for="room-code-input">O entra con un código (como jugador o espectador)</label>
+        <div class="paste-row"><input type="text" id="room-code-input" class="text-input" maxlength="5" placeholder="Ej: K7M2P" /><button type="button" id="btn-join-room" class="mini-btn">Entrar</button></div>
+      </div>
+      <div id="lobby-room" class="team-editor-col hidden">
+        <p>Sala <strong id="room-code-label"></strong> <button type="button" id="btn-copy-link" class="mini-btn">Copiar enlace</button></p>
+        <div id="seats" class="teams-editor-grid"></div>
+        <div id="setup-box" class="team-editor-col hidden">
+          <label class="field-label" for="ids-input">Tus 10 Axies (pega los IDs separados por espacios, comas o saltos de línea)</label>
+          <textarea id="ids-input" class="text-input" rows="3"></textarea>
+          <div id="ids-preview" class="thumbs"></div>
+          <button type="button" id="btn-ready" class="action-pill gold">Listo</button>
+        </div>
+        <p class="coin-sub">Quien no ocupe un puesto entra como espectador y ve todo el proceso.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

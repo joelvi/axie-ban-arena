@@ -115,3 +115,11 @@ button:focus-visible,input:focus-visible,label:focus-visible{outline:3px solid v
   .dock-center-hub{display:flex;justify-content:center;order:-1}
   .teams-editor-grid,.summary-grid{grid-template-columns:1fr}
 }
+
+/* Salas en vivo */
+#lobby{z-index:200}
+textarea.text-input{resize:vertical}
+.seat-card{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.seat-card.me{border-color:var(--gold)}
+.thumbs{display:flex;flex-wrap:wrap;gap:4px}
+.thumbs img{width:38px;height:38px;object-fit:contain;background:rgba(0,0,0,.35);border-radius:6px}
