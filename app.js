@@ -28,14 +28,23 @@ const state = {
 const KEYS = ["p1Name","p2Name","p1Axies","p2Axies","phase","coinCaller","coinResult","coinWinner","coinNonce","seqQueue","seqStep","history"];
 let db, room = null, code = null, myRole = 0, seats = {}, blind = {}, reveal = {};
 let hasGame = false, lastNonce = 0, lastHist = 0, rot = 0;
+let mode = "online", prevPhase = "LOBBY", localPicks = {};
+const can = (n) => mode === "local" || myRole === n; // en local, una sola persona opera ambos lados
 
 const nameOf = (n) => (n === 1 ? state.p1Name : state.p2Name);
 const teamOf = (n) => (n === 1 ? state.p1Axies : state.p2Axies);
-const pushGame = () => { const g = {}; KEYS.forEach((k) => (g[k] = state[k])); return room.child("game").set(g); };
+const pushGame = () => {
+  if (mode === "local") { onStateChanged(); refresh(); return Promise.resolve(); }
+  const g = {}; KEYS.forEach((k) => (g[k] = state[k])); return room.child("game").set(g);
+};
 const pickKey = () => `axiePick_${code}_${myRole}`;
 
 // Quién puede actuar en ESTE dispositivo
 function activeActor() {
+  if (mode === "local") {
+    const p = state.phase;
+    return p === "BLIND_P1" ? 1 : p === "BLIND_P2" ? 2 : p === "SEQ_DRAFT" ? state.seqQueue[state.seqStep] : null;
+  }
   if (state.phase === "BLIND") return myRole && !blind[myRole] ? myRole : null;
   if (state.phase === "SEQ_DRAFT") return state.seqQueue[state.seqStep] === myRole ? myRole : null;
   return null;
@@ -99,6 +108,8 @@ function phaseInfo() {
   if (p === "COIN_CALL") return [`${n(state.coinCaller)} elige Cara o Cruz`, "MONEDA", "Sorteo inicial"];
   if (p === "COIN_FLIP") return ["Lanzando la moneda…", "MONEDA", "Girando"];
   if (p === "COIN_DECIDE") return [`¡${n(state.coinWinner)} ganó la moneda! Decide quién tiene el último baneo`, "ORDEN", "Elige ventaja"];
+  if (p === "BLIND_P1") return [`Baneo oculto: ${n(1)} elige 1 Axie de ${n(2)}`, "OCULTO 1/2", n(1)];
+  if (p === "BLIND_P2") return [`Baneo oculto: ${n(2)} elige 1 Axie de ${n(1)}`, "OCULTO 2/2", n(2)];
   if (p === "BLIND") {
     const c = (blind[1] ? 1 : 0) + (blind[2] ? 1 : 0);
     const msg = !myRole ? "Baneo oculto en curso" : blind[myRole] ? "Tu baneo está enviado. Esperando al rival" : "Elige 1 Axie del rival; nadie lo verá hasta que ambos confirmen";
@@ -118,23 +129,23 @@ function updateHUD() {
   $("coin-caller-name").textContent = nameOf(state.coinCaller);
   $("p1-ban-count").textContent = state.p2Axies.filter((a) => a.banned).length;
   $("p2-ban-count").textContent = state.p1Axies.filter((a) => a.banned).length;
-  document.querySelector(".hud-left-tag").textContent = `${myRole ? "JUGADOR " + myRole : "ESPECTADOR"} • SALA ${code || "—"}`;
+  document.querySelector(".hud-left-tag").textContent = mode === "local" ? "MODO LOCAL" : `${myRole ? "JUGADOR " + myRole : "ESPECTADOR"} • SALA ${code || "—"}`;
 
-  const turn = p === "SEQ_DRAFT" ? state.seqQueue[state.seqStep] : null;
+  const turn = mode === "local" ? activeActor() : p === "SEQ_DRAFT" ? state.seqQueue[state.seqStep] : null;
   $("p1-hud").classList.toggle("active-turn", turn === 1);
   $("p2-hud").classList.toggle("active-turn", turn === 2);
 
   const last = state.history[state.history.length - 1];
-  $("btn-undo").classList.toggle("hidden", !(last && myRole === other(last.side) && (p === "SEQ_DRAFT" || p === "COMPLETED")));
-  $("btn-reset").classList.toggle("hidden", !myRole);
-  $("btn-new-match").classList.toggle("hidden", !myRole);
+  $("btn-undo").classList.toggle("hidden", !(last && (mode === "local" || myRole === other(last.side)) && (p === "SEQ_DRAFT" || p === "COMPLETED")));
+  $("btn-reset").classList.toggle("hidden", !(mode === "local" || myRole));
+  $("btn-new-match").classList.toggle("hidden", !(mode === "local" || myRole));
 
   const inCoin = ["COIN_CALL", "COIN_FLIP", "COIN_DECIDE"].includes(p);
   $("coin-box").classList.toggle("hidden", !inCoin);
   $("coin-choice-controls").classList.toggle("hidden", p !== "COIN_CALL");
   $("coin-winner-controls").classList.toggle("hidden", p !== "COIN_DECIDE");
-  $("coin-choice-controls").querySelectorAll("button").forEach((b) => (b.disabled = myRole !== state.coinCaller));
-  $("coin-winner-controls").querySelectorAll("button").forEach((b) => (b.disabled = myRole !== state.coinWinner));
+  $("coin-choice-controls").querySelectorAll("button").forEach((b) => (b.disabled = !can(state.coinCaller)));
+  $("coin-winner-controls").querySelectorAll("button").forEach((b) => (b.disabled = !can(state.coinWinner)));
   if (state.coinResult) $("coin-result-msg").textContent = `Salió ${state.coinResult} — ¡Gana ${nameOf(state.coinWinner)}!`;
   $("confirm-ban-box").classList.toggle("hidden", !activeActor());
 
@@ -155,12 +166,12 @@ function animateCoin() {
   rot = base + 1440 + (state.coinResult === "CARA" ? 0 : 180);
   $("coin-3d").style.transform = `rotateY(${rot}deg)`;
   setTimeout(() => {
-    if (myRole === state.coinCaller && state.phase === "COIN_FLIP") { state.phase = "COIN_DECIDE"; pushGame(); }
+    if (can(state.coinCaller) && state.phase === "COIN_FLIP") { state.phase = "COIN_DECIDE"; pushGame(); }
   }, 1650);
 }
 
 document.querySelectorAll("[data-call]").forEach((btn) => btn.addEventListener("click", () => {
-  if (state.phase !== "COIN_CALL" || myRole !== state.coinCaller) return;
+  if (state.phase !== "COIN_CALL" || !can(state.coinCaller)) return;
   const result = Math.random() < 0.5 ? "CARA" : "CRUZ";
   Object.assign(state, {
     phase: "COIN_FLIP", coinResult: result, coinNonce: Date.now(),
@@ -171,10 +182,11 @@ document.querySelectorAll("[data-call]").forEach((btn) => btn.addEventListener("
 
 // Oculto: 1 c/u. Secuencial 1-2-1 (4 turnos): 2 baneos c/u. Total 3 c/u → quedan 7.
 function chooseAdvantage(takesLast) {
-  if (state.phase !== "COIN_DECIDE" || myRole !== state.coinWinner) return;
+  if (state.phase !== "COIN_DECIDE" || !can(state.coinWinner)) return;
   const first = takesLast ? state.coinWinner : other(state.coinWinner), second = other(first);
-  Object.assign(state, { seqQueue: [first, second, second, first], seqStep: 0, phase: "BLIND" });
+  Object.assign(state, { seqQueue: [first, second, second, first], seqStep: 0, phase: mode === "local" ? "BLIND_P1" : "BLIND" });
   pushGame();
+  if (mode === "local") showCurtain(1);
 }
 $("btn-take-advantage").addEventListener("click", () => chooseAdvantage(true));
 $("btn-give-advantage").addEventListener("click", () => chooseAdvantage(false));
@@ -189,6 +201,21 @@ $("btn-confirm-ban").addEventListener("click", async () => {
     setHero(1, state.p1Axies[0]); setHero(2, state.p2Axies[0]);
     // Compromiso: solo se publica el hash; el índice real se revela cuando ambos han confirmado
     await room.child("blind/" + myRole).set({ commit: await sha(`${index}:${salt}`) });
+    return;
+  }
+  if (state.phase === "BLIND_P1") { // local: J1 elige, cortina, luego J2
+    localPicks[1] = state.selIndex;
+    clearSelection();
+    setHero(1, state.p1Axies[0]); setHero(2, state.p2Axies[0]);
+    state.phase = "BLIND_P2"; pushGame(); showCurtain(2);
+    return;
+  }
+  if (state.phase === "BLIND_P2") { // revelación simultánea
+    state.p2Axies[localPicks[1]].banned = true;
+    state.p1Axies[state.selIndex].banned = true;
+    clearSelection();
+    Object.assign(state, { phase: "SEQ_DRAFT", seqStep: 0 });
+    pushGame();
     return;
   }
   const axie = teamOf(state.selSide)[state.selIndex];
@@ -222,7 +249,7 @@ async function onBlind() {
 
 $("btn-undo").addEventListener("click", () => {
   const last = state.history[state.history.length - 1];
-  if (!last || myRole !== other(last.side)) return;
+  if (!last || (mode !== "local" && myRole !== other(last.side))) return;
   state.history.pop();
   teamOf(last.side)[last.index].banned = false;
   Object.assign(state, { seqStep: last.seqStep, phase: "SEQ_DRAFT" });
@@ -231,8 +258,10 @@ $("btn-undo").addEventListener("click", () => {
 });
 
 async function resetMatch() {
-  if (!myRole || !window.confirm("¿Reiniciar la partida para ambos jugadores?")) return;
-  await Promise.all([room.child("blind").remove(), room.child("reveal").remove()]);
+  if (!(mode === "local" || myRole) || !window.confirm("¿Reiniciar la partida?")) return;
+  if (mode !== "local") await Promise.all([room.child("blind").remove(), room.child("reveal").remove()]);
+  $("privacy-curtain").classList.add("hidden");
+  localPicks = {};
   [...state.p1Axies, ...state.p2Axies].forEach((a) => (a.banned = false));
   Object.assign(state, { phase: "COIN_CALL", coinResult: null, coinWinner: null, seqQueue: [], seqStep: 0, history: [] });
   clearSelection();
@@ -281,15 +310,20 @@ $("bg-upload").addEventListener("change", (e) => {
 
 // ---------- Sala en vivo ----------
 function applyGame(g) {
-  const prev = state.phase;
   Object.assign(state, g, { seqQueue: g.seqQueue || [], history: g.history || [], coinResult: g.coinResult || null, coinWinner: g.coinWinner || null });
+  onStateChanged();
+}
+
+function onStateChanged() {
+  const prev = prevPhase;
   if (state.phase === "COIN_CALL" && prev !== "COIN_CALL") { setHero(1, state.p1Axies[0]); setHero(2, state.p2Axies[0]); clearSelection(); }
-  if (prev === "BLIND" && state.phase === "SEQ_DRAFT") [1, 2].forEach((s) => setHero(s, teamOf(s).find((a) => a.banned), true));
+  if (prev.startsWith("BLIND") && state.phase === "SEQ_DRAFT") [1, 2].forEach((s) => setHero(s, teamOf(s).find((a) => a.banned), true));
   if (state.history.length > lastHist) {
     const h = state.history[state.history.length - 1];
     setHero(h.side, teamOf(h.side)[h.index], true);
   }
   lastHist = state.history.length;
+  prevPhase = state.phase;
   if (state.phase === "COIN_FLIP" && state.coinNonce !== lastNonce) { lastNonce = state.coinNonce; animateCoin(); }
 }
 
@@ -396,6 +430,49 @@ $("btn-copy-link").addEventListener("click", () => {
   (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).catch(() => window.prompt("Enlace de la sala:", url));
 });
 
+// ---------- Modo local (una sola pantalla) ----------
+const SAMPLE = {
+  1: ["11268195","12188801","4148780","12162441","12070166","12179007","12113980","12261266","12208254","12287669"],
+  2: ["11845210","11930412","12014588","11789234","12219044","11654321","12098765","11876543","12143210","11987654"]
+};
+function showCurtain(actor) {
+  $("curtain-title").textContent = `Turno secreto de ${nameOf(actor)}`;
+  $("curtain-opponent").textContent = nameOf(other(actor));
+  $("curtain-actor").textContent = nameOf(actor);
+  $("privacy-curtain").classList.remove("hidden");
+}
+$("btn-curtain-ready").addEventListener("click", () => $("privacy-curtain").classList.add("hidden"));
+
+const goHome = () => { sessionStorage.removeItem("axieRoom"); location.href = location.pathname; };
+["btn-home", "btn-leave-room", "btn-leave-local"].forEach((id) => $(id).addEventListener("click", goHome));
+
+$("btn-local").addEventListener("click", () => {
+  $("lobby-home").classList.add("hidden");
+  $("lobby-local").classList.remove("hidden");
+  $("lobby-error").classList.add("hidden");
+});
+[1, 2].forEach((n) => $(`local-ids-${n}`).addEventListener("input", () => {
+  const pv = $(`local-prev-${n}`);
+  pv.innerHTML = "";
+  parseIds($(`local-ids-${n}`).value).forEach((id) => pv.appendChild(makeImg(id)));
+}));
+$("btn-local-sample").addEventListener("click", () => [1, 2].forEach((n) => {
+  $(`local-ids-${n}`).value = SAMPLE[n].join(" ");
+  $(`local-ids-${n}`).dispatchEvent(new Event("input"));
+}));
+$("btn-start-local").addEventListener("click", () => {
+  const ids = [1, 2].map((n) => parseIds($(`local-ids-${n}`).value));
+  if (ids.some((l) => l.length !== 10 || new Set(l).size !== 10)) { alert("Cada jugador necesita 10 IDs distintos."); return; }
+  mode = "local"; hasGame = true; lastHist = 0; localPicks = {};
+  Object.assign(state, {
+    p1Name: $("local-name-1").value.trim() || "Jugador 1", p2Name: $("local-name-2").value.trim() || "Jugador 2",
+    p1Axies: ids[0].map((id) => ({ id, banned: false })), p2Axies: ids[1].map((id) => ({ id, banned: false })),
+    phase: "COIN_CALL", coinCaller: 1, coinResult: null, coinWinner: null, seqQueue: [], seqStep: 0, history: []
+  });
+  $("lobby").classList.add("hidden");
+  onStateChanged(); refresh();
+});
+
 // ---------- Inicio ----------
 try {
   if (typeof FIREBASE_CONFIG === "undefined" || FIREBASE_CONFIG.apiKey.startsWith("TU_")) throw new Error("config");
@@ -413,6 +490,7 @@ try {
   const err = $("lobby-error");
   err.textContent = "Falta configurar Firebase: edita firebase-config.js con los datos de tu proyecto.";
   err.classList.remove("hidden");
+  err.textContent = "Las salas en vivo necesitan configurar Firebase (firebase-config.js). El modo local sigue disponible.";
   $("btn-create-room").disabled = $("btn-join-room").disabled = true;
 }
 refresh();

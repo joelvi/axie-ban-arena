@@ -51,6 +51,7 @@
       <div class="hud-controls">
         <button type="button" id="btn-undo" class="hud-btn hidden" title="Deshacer último baneo">↩ Deshacer</button>
         <button type="button" id="btn-reset" class="hud-btn" title="Reiniciar partida">🔄 Reiniciar</button>
+        <button type="button" id="btn-home" class="hud-btn" title="Volver al inicio">🏠 Inicio</button>
         <label for="bg-upload" class="hud-btn icon-only" title="Cambiar imagen de fondo">🖼️</label>
         <input type="file" id="bg-upload" accept="image/*" class="hidden" />
       </div>
@@ -153,6 +154,15 @@
     </footer>
 
     <!-- Modal Final 6 vs 6 (Al pulsar PLAY) -->
+    <div id="privacy-curtain" class="overlay-modal hidden">
+      <div class="curtain-card">
+        <div class="curtain-badge">🔒 BANEO OCULTO SIMULTÁNEO</div>
+        <h2 id="curtain-title">Turno secreto de Jugador 1</h2>
+        <p>Asegúrate de que <strong id="curtain-opponent">Jugador 2</strong> no esté mirando la pantalla antes de elegir tu baneo secreto.</p>
+        <button type="button" id="btn-curtain-ready" class="action-pill gold large">👁️ Soy <span id="curtain-actor">Jugador 1</span>, mostrar tablero</button>
+      </div>
+    </div>
+
     <div id="summary-modal" class="overlay-modal hidden">
       <div class="modal-card wide-modal">
         <div class="modal-header">
@@ -182,14 +192,38 @@
 
   <div id="lobby" class="overlay-modal">
     <div class="modal-card wide-modal">
-      <h3>Salas en vivo</h3>
+      <h3>Elige cómo jugar</h3>
       <p id="lobby-error" class="coin-result-msg hidden"></p>
       <div id="lobby-home" class="team-editor-col">
         <label class="field-label" for="lobby-name">Tu nombre (opcional)</label>
         <input type="text" id="lobby-name" class="text-input" maxlength="20" placeholder="Jugador" />
-        <button type="button" id="btn-create-room" class="action-pill gold">Crear sala</button>
+        <button type="button" id="btn-create-room" class="action-pill gold">Crear sala en vivo (2 jugadores + espectadores)</button>
+        <button type="button" id="btn-local" class="action-pill dark">Jugar local: una sola pantalla, una persona opera todo</button>
         <label class="field-label" for="room-code-input">O entra con un código (como jugador o espectador)</label>
         <div class="paste-row"><input type="text" id="room-code-input" class="text-input" maxlength="5" placeholder="Ej: K7M2P" /><button type="button" id="btn-join-room" class="mini-btn">Entrar</button></div>
+      </div>
+      <div id="lobby-local" class="team-editor-col hidden">
+        <div class="teams-editor-grid">
+          <div class="team-editor-col">
+            <label class="field-label" for="local-name-1">Nombre Jugador 1 (opcional)</label>
+            <input type="text" id="local-name-1" class="text-input" maxlength="20" placeholder="Jugador 1" />
+            <label class="field-label" for="local-ids-1">10 IDs (pega una fila o columna desde Excel)</label>
+            <textarea id="local-ids-1" class="text-input" rows="4"></textarea>
+            <div id="local-prev-1" class="thumbs"></div>
+          </div>
+          <div class="team-editor-col">
+            <label class="field-label" for="local-name-2">Nombre Jugador 2 (opcional)</label>
+            <input type="text" id="local-name-2" class="text-input" maxlength="20" placeholder="Jugador 2" />
+            <label class="field-label" for="local-ids-2">10 IDs (pega una fila o columna desde Excel)</label>
+            <textarea id="local-ids-2" class="text-input" rows="4"></textarea>
+            <div id="local-prev-2" class="thumbs"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="btn-local-sample" class="hud-btn">⚡ Cargar IDs de ejemplo</button>
+          <button type="button" id="btn-leave-local" class="hud-btn">Volver</button>
+          <button type="button" id="btn-start-local" class="action-pill gold">Empezar partida local</button>
+        </div>
       </div>
       <div id="lobby-room" class="team-editor-col hidden">
         <p>Sala <strong id="room-code-label"></strong> <button type="button" id="btn-copy-link" class="mini-btn">Copiar enlace</button></p>
@@ -201,6 +235,7 @@
           <button type="button" id="btn-ready" class="action-pill gold">Listo</button>
         </div>
         <p class="coin-sub">Quien no ocupe un puesto entra como espectador y ve todo el proceso.</p>
+        <button type="button" id="btn-leave-room" class="hud-btn">Salir de la sala</button>
       </div>
     </div>
   </div>
