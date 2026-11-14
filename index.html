@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Axie Classic - Arena de Baneos 10v10</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="arena-app" class="arena-wrapper">
+    <!-- Barra Superior Broadcast -->
+    <header class="top-hud">
+      <div class="hud-left-tag">WARRIOR VIEW</div>
+
+      <div class="scoreboard-bar">
+        <!-- Jugador 1 -->
+        <div class="player-hud p1-hud" id="p1-hud">
+          <div class="energy-badge" title="Baneos realizados por Jugador 1">
+            <span class="ban-icon-mini">🚫</span>
+            <span id="p1-ban-count">0</span>
+          </div>
+          <button type="button" class="player-name-btn" id="p1-name-display" title="Haz clic para cambiar el nombre">
+            Jugador 1
+          </button>
+        </div>
+
+        <!-- Emblema Central -->
+        <div class="center-emblem" title="Axie Classic 1v1 Ban Draft">
+          <svg viewBox="0 0 64 40" class="emblem-svg" aria-hidden="true">
+            <path d="M32 4 L42 14 L58 10 L50 24 L56 36 L32 30 L8 36 L14 24 L6 10 L22 14 Z" fill="none" stroke="#f5d061" stroke-width="3" stroke-linejoin="round"/>
+            <circle cx="32" cy="20" r="5" fill="#f5d061"/>
+          </svg>
+        </div>
+
+        <!-- Jugador 2 -->
+        <div class="player-hud p2-hud" id="p2-hud">
+          <button type="button" class="player-name-btn" id="p2-name-display" title="Haz clic para cambiar el nombre">
+            Jugador 2
+          </button>
+          <div class="energy-badge" title="Baneos realizados por Jugador 2">
+            <span id="p2-ban-count">0</span>
+            <span class="ban-icon-mini">🚫</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controles Rápidos -->
+      <div class="hud-controls">
+        <button type="button" id="btn-undo" class="hud-btn hidden" title="Deshacer último baneo">↩ Deshacer</button>
+        <button type="button" id="btn-reset" class="hud-btn" title="Reiniciar partida">🔄 Reiniciar</button>
+        <button type="button" id="btn-edit-teams" class="hud-btn primary-hud" title="Configurar IDs de Axies y nombres">✏️ Equipos</button>
+        <label for="bg-upload" class="hud-btn icon-only" title="Cambiar imagen de fondo">🖼️</label>
+        <input type="file" id="bg-upload" accept="image/*" class="hidden" />
+      </div>
+    </header>
+
+    <!-- Banner de Estado / Turno Actual -->
+    <div class="phase-banner" id="phase-banner">
+      <span id="phase-text">Fase 1: Sorteo de moneda para ventaja del último baneo</span>
+    </div>
+
+    <!-- Escenario Central: Dos Axies Gigantes Enfrentados -->
+    <main class="battle-stage">
+      <!-- Lado Jugador 1 (Izquierda) -->
+      <section class="fighter-spotlight left-spotlight" id="spotlight-p1">
+        <div class="spotlight-tag p1-tag" id="spotlight-p1-label">JUGADOR 1 • #—</div>
+        <div class="axie-hero-container">
+          <div class="ground-shadow"></div>
+          <img id="hero-img-p1" class="axie-hero-img flip-right" src="" alt="Axie Jugador 1" />
+          <div id="hero-ban-seal-p1" class="ban-seal hidden" aria-hidden="true">
+            <svg viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="48" fill="rgba(220, 38, 38, 0.14)" stroke="#dc2626" stroke-width="11"/>
+              <line x1="26" y1="94" x2="94" y2="26" stroke="#dc2626" stroke-width="11" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- Centro de Acción (Moneda / Botón de Confirmar Baneo / VS) -->
+      <section class="center-stage-widget">
+        <!-- Widget de Moneda Virtual -->
+        <div id="coin-box" class="coin-panel">
+          <div class="coin-title">SORTEO DE MONEDA</div>
+          <div class="coin-scene">
+            <div class="coin" id="coin-3d">
+              <div class="coin-face coin-front">CARA</div>
+              <div class="coin-face coin-back">CRUZ</div>
+            </div>
+          </div>
+          <div id="coin-choice-controls" class="coin-controls">
+            <p class="coin-sub"><strong id="coin-caller-name">Jugador 1</strong> elige cara:</p>
+            <div class="btn-row">
+              <button type="button" class="action-pill gold" data-call="CARA">🟡 Cara</button>
+              <button type="button" class="action-pill silver" data-call="CRUZ">⚪ Cruz</button>
+            </div>
+          </div>
+          <div id="coin-winner-controls" class="coin-controls hidden">
+            <p class="coin-result-msg" id="coin-result-msg">¡Ganó Jugador 1!</p>
+            <p class="coin-sub">El ganador decide si toma la <strong>ventaja del último baneo</strong> (secuencia 1 - 2 - 1):</p>
+            <div class="btn-col">
+              <button type="button" id="btn-take-advantage" class="action-pill gold">🏆 Quedarme con el Último Ban (1-2-1)</button>
+              <button type="button" id="btn-give-advantage" class="action-pill dark">Ceder ventaja al rival</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botón de Confirmación de Selección en Arena -->
+        <div id="confirm-ban-box" class="confirm-ban-panel hidden">
+          <div class="target-preview-text" id="target-preview-text">Selecciona un Axie enemigo abajo</div>
+          <button type="button" id="btn-confirm-ban" class="confirm-ban-btn" disabled>
+            🚫 CONFIRMAR BANEO
+          </button>
+        </div>
+      </section>
+
+      <!-- Lado Jugador 2 (Derecha) -->
+      <section class="fighter-spotlight right-spotlight" id="spotlight-p2">
+        <div class="spotlight-tag p2-tag" id="spotlight-p2-label">JUGADOR 2 • #—</div>
+        <div class="axie-hero-container">
+          <div class="ground-shadow"></div>
+          <img id="hero-img-p2" class="axie-hero-img" src="" alt="Axie Jugador 2" />
+          <div id="hero-ban-seal-p2" class="ban-seal hidden" aria-hidden="true">
+            <svg viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="48" fill="rgba(220, 38, 38, 0.14)" stroke="#dc2626" stroke-width="11"/>
+              <line x1="26" y1="94" x2="94" y2="26" stroke="#dc2626" stroke-width="11" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Muelle Inferior Angular 5x2 + Botón Central PLAY -->
+    <footer class="bottom-dock">
+      <!-- Cuadrícula 5x2 Jugador 1 -->
+      <div class="dock-wing left-wing">
+        <div class="roster-grid" id="grid-p1"></div>
+      </div>
+
+      <!-- Botón Central Trapezoidal -->
+      <div class="dock-center-hub">
+        <button type="button" id="btn-main-play" class="play-trapezoid-btn" disabled>
+          <span id="play-btn-label">MONEDA</span>
+          <small id="play-btn-sub">Esperando sorteo</small>
+        </button>
+      </div>
+
+      <!-- Cuadrícula 5x2 Jugador 2 -->
+      <div class="dock-wing right-wing">
+        <div class="roster-grid" id="grid-p2"></div>
+      </div>
+    </footer>
+
+    <!-- Cortina Anti-Espionaje para Primer Baneo Simultáneo Oculto -->
+    <div id="privacy-curtain" class="overlay-modal hidden">
+      <div class="curtain-card">
+        <div class="curtain-badge">🔒 BANEO OCULTO SIMULTÁNEO</div>
+        <h2 id="curtain-title">Turno secreto de Jugador 1</h2>
+        <p id="curtain-desc">
+          Asegúrate de que <strong id="curtain-opponent">Jugador 2</strong> no esté mirando la pantalla antes de elegir tu primer baneo secreto.
+        </p>
+        <button type="button" id="btn-curtain-ready" class="action-pill gold large">
+          👁️ Soy <span id="curtain-actor">Jugador 1</span>, mostrar tablero
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal de Edición de Equipos (10 IDs + Nombres Opcionales) -->
+    <div id="teams-modal" class="overlay-modal hidden">
+      <div class="modal-card wide-modal">
+        <div class="modal-header">
+          <h3>Configurar Jugadores y 10 Axies por Lado</h3>
+          <button type="button" id="btn-close-teams" class="close-x">✕</button>
+        </div>
+
+        <div class="teams-editor-grid">
+          <!-- Editor Jugador 1 -->
+          <div class="team-editor-col">
+            <label class="field-label">Nombre Jugador 1 (opcional)</label>
+            <input type="text" id="input-p1-name" class="text-input" placeholder="Jugador 1" maxlength="20" />
+
+            <label class="field-label">Pegar 10 IDs rápidos (desde Excel o lista)</label>
+            <div class="paste-row">
+              <input type="text" id="paste-p1" class="text-input" placeholder="Ej: 11268195 12188801 4148780..." />
+              <button type="button" class="mini-btn" id="btn-apply-paste-p1">Aplicar</button>
+            </div>
+
+            <div class="slots-10-grid" id="editor-slots-p1"></div>
+          </div>
+
+          <!-- Editor Jugador 2 -->
+          <div class="team-editor-col">
+            <label class="field-label">Nombre Jugador 2 (opcional)</label>
+            <input type="text" id="input-p2-name" class="text-input" placeholder="Jugador 2" maxlength="20" />
+
+            <label class="field-label">Pegar 10 IDs rápidos (desde Excel o lista)</label>
+            <div class="paste-row">
+              <input type="text" id="paste-p2" class="text-input" placeholder="Ej: 12162441 12070166 12179007..." />
+              <button type="button" class="mini-btn" id="btn-apply-paste-p2">Aplicar</button>
+            </div>
+
+            <div class="slots-10-grid" id="editor-slots-p2"></div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btn-load-sample" class="hud-btn">⚡ Cargar IDs de ejemplo</button>
+          <button type="button" id="btn-save-teams" class="action-pill gold">💾 Guardar y Aplicar a la Arena</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Final 6 vs 6 (Al pulsar PLAY) -->
+    <div id="summary-modal" class="overlay-modal hidden">
+      <div class="modal-card wide-modal">
+        <div class="modal-header">
+          <h3>⚔️ Alineaciones Finales Habilitadas (6 vs 6)</h3>
+          <button type="button" id="btn-close-summary" class="close-x">✕</button>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-col">
+            <h4 id="summary-p1-title">Jugador 1 (6 Activos)</h4>
+            <div class="summary-axies" id="summary-p1-axies"></div>
+            <button type="button" class="action-pill dark full-w" id="btn-copy-p1">📋 Copiar 6 IDs de Jugador 1</button>
+          </div>
+          <div class="summary-col">
+            <h4 id="summary-p2-title">Jugador 2 (6 Activos)</h4>
+            <div class="summary-axies" id="summary-p2-axies"></div>
+            <button type="button" class="action-pill dark full-w" id="btn-copy-p2">📋 Copiar 6 IDs de Jugador 2</button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btn-new-match" class="action-pill gold">🔄 Nueva Partida</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
